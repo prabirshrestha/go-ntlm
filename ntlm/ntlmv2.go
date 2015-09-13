@@ -238,14 +238,13 @@ func (n *V2ServerSession) ProcessAuthenticateMessage(am *AuthenticateMessage) (e
 		return err
 	}
 
-
 	if am.Version == nil {
-        //UGH not entirely sure how this could possibly happen, going to put this in for now
-        //TODO investigate if this ever is really happening
-        am.Version = &VersionStruct{ProductMajorVersion: uint8(5), ProductMinorVersion: uint8(1), ProductBuild: uint16(2600), NTLMRevisionCurrent: uint8(15)}
+		//UGH not entirely sure how this could possibly happen, going to put this in for now
+		//TODO investigate if this ever is really happening
+		am.Version = &VersionStruct{ProductMajorVersion: uint8(5), ProductMinorVersion: uint8(1), ProductBuild: uint16(2600), NTLMRevisionCurrent: uint8(15)}
 
-        l4g.Error("Nil version in ntlmv2")
-    }
+		l4g.Error("Nil version in ntlmv2")
+	}
 
 	err = n.calculateKeys(am.Version.NTLMRevisionCurrent)
 	if err != nil {
@@ -289,7 +288,19 @@ type V2ClientSession struct {
 }
 
 func (n *V2ClientSession) GenerateNegotiateMessage() (nm *NegotiateMessage, err error) {
-	return nil, nil
+	nm = new(NegotiateMessage)
+
+	nm.Signature = []byte("NTLMSSP\x00")
+	nm.MessageType = uint32(1)
+
+	nm.NegotiateFlags = uint32(0xb203)
+
+	nm.DomainNameFields, _ = CreateStringPayload(strings.ToUpper(n.userDomain))
+	nm.WorkstationFields, _ = CreateBytePayload(make([]byte, 0))
+
+	nm.Version = &VersionStruct{ProductMajorVersion: uint8(5), ProductMinorVersion: uint8(1), ProductBuild: uint16(2600), NTLMRevisionCurrent: uint8(15)}
+
+	return nm, nil
 }
 
 func (n *V2ClientSession) ProcessChallengeMessage(cm *ChallengeMessage) (err error) {
